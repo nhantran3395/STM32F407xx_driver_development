@@ -1,3 +1,13 @@
+/**
+*@file stm32f407xx_gpio.c
+*@brief provide functions for interfacing with GPIO pin
+*
+*This source file provide functions for interfacing with GPIO pins on stm32f407xx MCUs.
+*
+*@author Tran Thanh Nhan
+*@date 23/07/2019
+*/
+
 #include "stm32f407xx_gpio.h"  
 
 void GPIO_CLK_ctr (GPIO_TypeDef *GPIOxPtr, uint8_t enOrDis)
