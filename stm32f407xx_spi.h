@@ -26,12 +26,69 @@ typedef struct{
 
 typedef struct{
 	SPI_TypeDef *SPIxPtr;
-	SPI_Config_t SPIxConfigPtr;
+	SPI_Config_t *SPIxConfigPtr;
 }SPI_Handle_t;
 
-void SPI_init(void);
-uint8_t SPI_read_data (void);
-void SPI_write_data (void);
+/**
+*@brief SPI clock enable/disable
+*@param Pointer to base address of SPI registers
+*@param Enable or disable action
+*@return none
+*/
+void SPI_CLK_ctr(SPI_TypeDef *SPIxPtr);
+
+/**
+*@brief Initialize SPI bus
+*@param Pointer to SPI_Handle struct
+*@return none
+*/
+void SPI_init(SPI_Handle_t *SPIxHandlePtr);
+
+/**
+*@brief Deinitialize SPI bus
+*@param Pointer to SPI_Handle struct
+*@return none
+*/
+void SPI_deinit(SPI_TypeDef *SPIxPtr);
+
+/**
+*@brief Receive data from SPI bus
+*@param Pointer to base address of SPI registers
+*@param Pointer to memory region to store received data
+*@param Length of data
+*@return Pointer to memory region to store received data
+*/
+uint8_t SPI_read_data (SPI_TypeDef *SPIxPtr, uint8_t *rxBufferPtr,uint32_t Length);
+
+/**
+*@brief Write data to SPI bus
+*@param Pointer to base address of SPI registers
+*@param Pointer to data to write
+*@param Length of data
+*@return none
+*/
+void SPI_write_data (SPI_TypeDef *SPIxPtr, uint8_t *txBufferPtr, uint32_t Length);
+
+/**
+*@brief Enable or disable SPI 's interrupt 
+*@param IRQ number
+*@param Enable or disable action
+*@return none
+*/
 void SPI_intrpt_ctrl (void);
-void SPI_intrpt_handler (void);
+
+/**
+*@brief Config interrupt priority for SPI peripheral
+*@param IRQ number
+*@param Priority
+*@return none
+*/
+void SPI_intrpt_priority_config(void);
+
+/**
+*@brief Handler for SPI peripheral
+*@param Pointer to SPI_Handle struct
+*@return none
+*/
+void SPI_intrpt_handler (SPI_Handle_t *SPIxHandlePtr);
 #endif 
