@@ -12,29 +12,30 @@
 #define STM32F407XX_GPIO_H
 
 #include "stm32f407xx.h"                  // Device header
+#include "stm32f407xx_common_macro.h"
 #include <stdint.h>
 
-#define ENABLE 1
-#define DISABLE 0
-#define SET 1
-#define CLEAR 0
+//#define ENABLE 1
+//#define DISABLE 0
+//#define SET 1
+//#define CLEAR 0
 
-/*
-*ARM cortex M4 Processor NVIC IPR register base address
-*/
-#define NVIC_IPR_BASE_ADDR 	((volatile uint32_t*)0xE000E400)
-#define NUM_OF_IPR_BIT_IMPLEMENTED 4
+///*
+//*ARM cortex M4 Processor NVIC IPR register base address
+//*/
+//#define NVIC_IPR_BASE_ADDR 	((volatile uint32_t*)0xE000E400)
+//#define NUM_OF_IPR_BIT_IMPLEMENTED 4
 
-/*
-*IRQ number
-*/
-#define IRQ_EXTI0 6
-#define IRQ_EXTI1 7
-#define IRQ_EXTI2 8
-#define IRQ_EXTI3 9
-#define IRQ_EXTI4 10
-#define IRQ_EXTI9_5 23
-#define IRQ_EXTI15_10 40
+///*
+//*IRQ number
+//*/
+//#define IRQ_EXTI0 6
+//#define IRQ_EXTI1 7
+//#define IRQ_EXTI2 8
+//#define IRQ_EXTI3 9
+//#define IRQ_EXTI4 10
+//#define IRQ_EXTI9_5 23
+//#define IRQ_EXTI15_10 40
 
 /*
 *@GPIO_PIN_NO

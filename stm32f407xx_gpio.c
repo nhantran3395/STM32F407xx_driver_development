@@ -57,6 +57,8 @@ void GPIO_CLK_ctr (GPIO_TypeDef *GPIOxPtr, uint8_t enOrDis)
 
 void GPIO_init (GPIO_Handle_t *GPIOxHandlePtr)
 {
+	GPIO_CLK_ctr(GPIOxHandlePtr->GPIOxPtr,ENABLE);
+	
 	/*configure GPIO pin mode*/
 	uint8_t valueSet = GPIOxHandlePtr->GPIO_Pin_config.mode;
 	uint8_t bitPos = GPIOxHandlePtr->GPIO_Pin_config.pinNumber;
