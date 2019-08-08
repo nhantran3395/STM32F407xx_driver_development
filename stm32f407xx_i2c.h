@@ -15,11 +15,37 @@
 #include "stm32f407xx_common_macro.h"
 #include <stdint.h>
 
+/*
+*I2C peripheral input frequency (in MHz)
+*/
+#define I2C_FPCLK_MHZ	16
+
+/*
+*@I2C_SCLspeed
+*I2C SCL frequency selection
+*/
+#define I2C_FSCL_SM 100000
+#define I2C_FSCL_FM 400000
+
+/*
+*@I2C_ACKctr
+*I2C ACK control
+*/
+#define I2C_ACKctr_DISABLE	0
+#define I2C_ACKctr_ENABLE	1 
+
+/*
+*@I2C_FMdutyCycle
+*I2C fast mode duty cycle
+*/
+#define I2C_FMduty_2	0
+#define I2C_FMduty_16_9	1 
+
 typedef struct{
-	uint8_t SCLspeed;	
+	uint32_t SCLspeed;	/*refer to @I2C_SCLspeed for possible value*/
 	uint8_t deviceAddress;	
-	uint8_t ACKctr;	
-	uint8_t FMdutyCycle;	
+	uint8_t ACKctr;	/*refer to @I2C_ACKctr for possible value*/	
+	uint8_t FMdutyCycle;	/*refer to @I2C_FMdutyCycle for possible value*/	
 }I2C_Config_t;
 
 typedef struct{
@@ -50,12 +76,16 @@ void I2C_init(I2C_Handle_t *I2CxHandlePtr);
 void I2C_deinit(I2C_TypeDef *I2CxPtr);
 
 /**
-*@brief I2C communication enable/disable
+*@brief I2C peripheral enable/disable
+*
+*Set or clear PE bit in CR1 register to enable/disable I2C peripheral
+*Call this function after calling I2C_init to enable I2C communication. 
+*
 *@param Pointer to base address of I2C registers
 *@param Enable or disable action
 *@return none
 */
-void I2C_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
+void I2C_periph_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
 
 /**
 *@brief Master receive data
@@ -68,12 +98,13 @@ uint8_t I2C_master_receive (I2C_TypeDef *I2CxPtr, uint8_t *rxBufferPtr,uint32_t 
 
 /**
 *@brief Master send data 
-*@param Pointer to base address of I2C registers
+*@param Pointer to I2C handle struct
 *@param Pointer to data to send
 *@param Length of data
+*@param Slave address (7 bit)
 *@return none
 */
-void I2C_master_send(I2C_TypeDef *I2CxPtr, uint8_t *txBufferPtr, uint32_t Length);
+void I2C_master_send(I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t Length, uint8_t slaveAddr);
 
 /**
 *@brief Slave receive data
