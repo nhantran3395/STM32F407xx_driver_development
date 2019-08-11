@@ -9,8 +9,6 @@
 */
 
 #include "stm32f407xx_i2c.h"
-#define START 1
-#define STOP 0
 
 static void I2C_start_stop_generation(I2C_TypeDef *I2CxPtr, uint8_t startOrStop)
 {	
@@ -22,12 +20,15 @@ static void I2C_start_stop_generation(I2C_TypeDef *I2CxPtr, uint8_t startOrStop)
 	}			
 }
 
-static void I2C_send_slave_address(I2C_TypeDef *I2CxPtr, uint8_t slaveAddr)
+static void I2C_address_phase_execute(I2C_TypeDef *I2CxPtr, uint8_t slaveAddr, uint8_t readOrWrite)
 {
 	uint8_t sendData = slaveAddr << 1;
 	
-	/*clear r/w bit*/
-	sendData &= ~1;
+	if(readOrWrite == READ){
+		sendData |= 1;
+	}else{
+		sendData &= ~1;
+	}
 	
 	I2CxPtr->DR = sendData;
 }
@@ -39,10 +40,28 @@ static void I2C_clear_ADDRflag(I2C_TypeDef *I2CxPtr)
 	(void) tempData;
 }
 
-static void I2C_send_data(I2C_TypeDef *I2CxPtr,uint8_t *txBufferPtr)
+static void I2C_ACK_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis)
+{
+	if(enOrDis == ENABLE){
+		I2CxPtr->CR1 |= I2C_CR1_ACK;
+	}else{
+		I2CxPtr->CR1 &= ~(I2C_CR1_ACK);
+	}
+
+}
+
+static void I2C_read_data(I2C_TypeDef *I2CxPtr,uint8_t *rxBufferPtr, uint32_t *LengthPtr)
+{
+	while(!(I2CxPtr->SR1 & I2C_SR1_RXNE));
+	*rxBufferPtr = I2CxPtr->DR ;
+	(*LengthPtr)--;
+}
+
+static void I2C_send_data(I2C_TypeDef *I2CxPtr,uint8_t *txBufferPtr, uint32_t *LengthPtr)
 {
 	while(!(I2CxPtr->SR1 & I2C_SR1_TXE));
 	I2CxPtr->DR = *txBufferPtr;
+	(*LengthPtr)--;
 }
 
 static uint32_t RCC_get_PLL_output (void)
@@ -157,10 +176,6 @@ void I2C_init(I2C_Handle_t *I2CxHandlePtr)
 	I2CxHandlePtr->I2CxPtr->CCR &= ~(I2C_CCR_CCR);
 	I2CxHandlePtr->I2CxPtr->CCR |= CCRval << I2C_CCR_CCR_Pos;
 	
-	/*enable (or disable) ACK*/
-	I2CxHandlePtr->I2CxPtr->CR1 &= ~(I2C_CR1_ACK);
-	I2CxHandlePtr->I2CxPtr->CR1 |= I2CxHandlePtr->I2CxConfigPtr->ACKctr << I2C_CR1_ACK_Pos;
-	
 	/*program device own address*/ 
 	I2CxHandlePtr->I2CxPtr->OAR1	&= ~(I2C_OAR1_ADD1_7);
 	I2CxHandlePtr->I2CxPtr->OAR1	|= I2CxHandlePtr->I2CxConfigPtr->deviceAddress <<	I2C_OAR1_ADD1_Pos;
@@ -218,24 +233,58 @@ void I2C_intrpt_ctrl (uint8_t IRQnumber, uint8_t enOrDis)
 	}
 }
 
-void I2C_master_send(I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t Length, uint8_t slaveAddr)
+void I2C_master_receive (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint32_t Length,uint8_t slaveAddr)
 {
-	/*generate start condition*/
+	/*enable acking for master*/
+	I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr, ENABLE);
+	
+	/*generate start condition and wait for SB flag to be set*/
 	I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,START);
 	while(!(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_SB));
 	
-	/*send slave address and r/w bit*/
-	I2C_send_slave_address(I2CxHandlePtr->I2CxPtr,slaveAddr);
-	
+	/*execute addressing phase and wait for ADDR flag to be set*/
+	I2C_address_phase_execute(I2CxHandlePtr->I2CxPtr,slaveAddr,READ);
 	while(!(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_ADDR));
 	
+	if(Length == 1){
+		/*case slave only send 1 byte of data, disable ACK, clear ADDR flag,generate stop condition before reading data*/
+		I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
+		I2C_clear_ADDRflag(I2CxHandlePtr->I2CxPtr);
+		I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,STOP);
+		I2C_read_data(I2CxHandlePtr->I2CxPtr, rxBufferPtr, &Length);
+	}else{
+		/*case slave send multiple data bytes, clear ADDR flag*/
+		I2C_clear_ADDRflag(I2CxHandlePtr->I2CxPtr);
+		
+		while(Length){
+			if(Length == 1){
+				/*when there are 2 bytes left to receive, disable ACK and generate stop condition*/
+				I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
+				I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,STOP);
+			}
+			I2C_read_data(I2CxHandlePtr->I2CxPtr, rxBufferPtr, &Length);
+			rxBufferPtr++;
+		}
+	}
+}
+
+void I2C_master_send(I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t Length, uint8_t slaveAddr)
+{
+	/*generate start condition and wait for SB flag to be set*/
+	I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,START);
+	while(!(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_SB));
+	
+	/*execute addressing phase*/
+	I2C_address_phase_execute(I2CxHandlePtr->I2CxPtr,slaveAddr,WRITE);
+	
+	/*wait for ADDR flag to be set then clear*/
+	while(!(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_ADDR));
 	I2C_clear_ADDRflag(I2CxHandlePtr->I2CxPtr);
 	
 	/*send data until length = 0*/
 	while(Length){
-		I2C_send_data(I2CxHandlePtr->I2CxPtr,txBufferPtr);
+		I2C_send_data(I2CxHandlePtr->I2CxPtr,txBufferPtr,&Length);
 		txBufferPtr++;
-		Length--;
 	}
 	
 	/*wait for TXE and BTF flag to be set before generating stop condition*/

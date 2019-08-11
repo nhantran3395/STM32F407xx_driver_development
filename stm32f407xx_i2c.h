@@ -16,11 +16,6 @@
 #include <stdint.h>
 
 /*
-*I2C peripheral input frequency (in MHz)
-*/
-#define I2C_FPCLK_MHZ	16
-
-/*
 *@I2C_SCLspeed
 *I2C SCL frequency selection
 */
@@ -89,12 +84,12 @@ void I2C_periph_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
 
 /**
 *@brief Master receive data
-*@param Pointer to base address of I2C registers
+*@param Pointer to I2C handle struct
 *@param Pointer to memory region to store received data
 *@param Length of data
-*@return Pointer to memory region to store received data
+*@return none
 */
-uint8_t I2C_master_receive (I2C_TypeDef *I2CxPtr, uint8_t *rxBufferPtr,uint32_t Length);
+void I2C_master_receive (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint32_t Length,uint8_t slaveAddr);
 
 /**
 *@brief Master send data 
