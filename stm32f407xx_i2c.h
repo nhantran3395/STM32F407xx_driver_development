@@ -14,6 +14,7 @@
 #include "stm32f407xx.h"                  // Device header
 #include "stm32f407xx_common_macro.h"
 #include <stdint.h>
+#include <stdlib.h>
 
 /*
 *@I2C_SCLspeed
@@ -24,17 +25,45 @@
 
 /*
 *@I2C_ACKctr
-*I2C ACK control
+*I2C ACKing enable/disable
 */
 #define I2C_ACKctr_DISABLE	0
 #define I2C_ACKctr_ENABLE	1 
 
 /*
 *@I2C_FMdutyCycle
-*I2C fast mode duty cycle
+*I2C fast mode duty cycle selection
 */
 #define I2C_FMduty_2	0
 #define I2C_FMduty_16_9	1 
+
+/*
+*@I2C_RepeatedStart
+*I2C repeated start enable/disable
+*/
+#define I2C_RS_DISABLE 0
+#define I2C_RS_ENABLE 1 
+
+/*
+*@I2C_State
+*State of I2C peripheral
+*/
+#define I2C_READY 0
+#define I2C_BUSY_IN_TX 1
+#define I2C_BUSY_IN_RX 2
+
+/*
+*@I2C_Event_and_Error
+*I2C interrupt event and error macro
+*/
+#define I2C_EV_TX_CMPLT	0
+#define I2C_EV_RX_CMPLT	1
+#define I2C_EV_STOP	2
+#define	I2C_ERR_BERR 3
+#define	I2C_ERR_ARLO 4
+#define	I2C_ERR_AF 5
+#define	I2C_ERR_OVR 6
+#define	I2C_ERR_TIMEOUT 7
 
 typedef struct{
 	uint32_t SCLspeed;	/*refer to @I2C_SCLspeed for possible value*/
@@ -46,6 +75,14 @@ typedef struct{
 typedef struct{
 	I2C_TypeDef *I2CxPtr;
 	I2C_Config_t *I2CxConfigPtr;
+	uint8_t *txBufferPtr;	/*To store application TxBuffer address*/
+	uint8_t *rxBufferPtr;	/*To store application RxBuffer address*/
+	uint32_t txLength;	/*To store Tx Length*/
+	uint32_t rxLength;	/*To store Rx Length*/
+	uint8_t State;	/*To store I2C peripheral state: BUSY_IN_TX or BUSY_IN_RX or READY*/
+	uint8_t slaveAddr;	/*To store Slave device address*/
+	uint32_t rxSize;
+	uint8_t repeatedStart;
 }I2C_Handle_t;
 
 /**
@@ -87,19 +124,44 @@ void I2C_periph_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
 *@param Pointer to I2C handle struct
 *@param Pointer to memory region to store received data
 *@param Length of data
+*@param Slave address
+*@param Enable or disable repeated start
 *@return none
 */
-void I2C_master_receive (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint32_t Length,uint8_t slaveAddr);
+void I2C_master_receive (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint32_t Length,uint8_t slaveAddr,uint8_t repeatedStart);
 
 /**
 *@brief Master send data 
 *@param Pointer to I2C handle struct
 *@param Pointer to data to send
 *@param Length of data
-*@param Slave address (7 bit)
+*@param Slave address
+*@param Enable or disable repeated start
 *@return none
 */
-void I2C_master_send(I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t Length, uint8_t slaveAddr);
+void I2C_master_send(I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t Length, uint8_t slaveAddr,uint8_t repeatedStart);
+
+/**
+*@brief Receive data from I2C bus (interrup base)
+*@param Pointer to I2C handle struct
+*@param Pointer to memory region to store received data
+*@param Length of data
+*@param Slave address
+*@param Enable or disable repeated start
+*@return Status of Rx
+*/
+uint8_t I2C_master_receive_intrpt (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint32_t Length,uint8_t slaveAddr,uint8_t repeatedStart);
+
+/**
+*@brief Send data to SPI bus (interrupt base)
+*@param Pointer to SPI handle struct
+*@param Pointer to data to send
+*@param Length of data
+*@param Slave address
+*@param Enable or disable repeated start
+*@return Status of Tx
+*/
+uint8_t I2C_master_send_intrpt (I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t Length,uint8_t slaveAddr,uint8_t repeatedStart);
 
 /**
 *@brief Slave receive data
@@ -148,4 +210,12 @@ void I2C_err_intrpt_handler (I2C_Handle_t *I2CxHandlePtr);
 *@return none
 */
 void I2C_event_intrpt_handler (I2C_Handle_t *I2CxHandlePtr);
+
+/**
+*@brief inform application of I2C event or error
+*@param Pointer to I2C_Handle struct
+*@param Event or error
+*@return none
+*/
+void I2C_application_event_callback (I2C_Handle_t *I2CxHandlePtr,uint8_t event);
 #endif 
