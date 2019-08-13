@@ -179,9 +179,9 @@ uint16_t GPIO_read_port (GPIO_TypeDef *GPIOxPtr)
 void GPIO_write_pin (GPIO_TypeDef *GPIOxPtr, uint8_t pinNumber, uint8_t setOrClear)
 {
 	if(setOrClear == SET){
-		GPIOxPtr->ODR |= setOrClear<<pinNumber;
+		GPIOxPtr->ODR |= 1<<pinNumber;
 	}else{
-		GPIOxPtr->ODR &= setOrClear<<pinNumber;
+		GPIOxPtr->ODR &= ~(1<<pinNumber);
 	}
 }
 
