@@ -41,8 +41,8 @@
 *@I2C_RepeatedStart
 *I2C repeated start enable/disable
 */
-#define I2C_RS_DISABLE 0
-#define I2C_RS_ENABLE 1 
+#define I2C_REPEATED_START_DISABLE 0
+#define I2C_REPEATED_START_ENABLE 1 
 
 /*
 *@I2C_State
@@ -56,14 +56,16 @@
 *@I2C_Event_and_Error
 *I2C interrupt event and error macro
 */
-#define I2C_EV_TX_CMPLT	0
-#define I2C_EV_RX_CMPLT	1
-#define I2C_EV_STOP	2
+#define I2C_EV_MST_TX_CMPLT	0
+#define I2C_EV_MST_RX_CMPLT	1
+#define I2C_EV_SLV_STOP_DETECTED	2
 #define	I2C_ERR_BERR 3
 #define	I2C_ERR_ARLO 4
 #define	I2C_ERR_AF 5
 #define	I2C_ERR_OVR 6
 #define	I2C_ERR_TIMEOUT 7
+#define I2C_EV_SLV_DT_REQ	8/*device (acting as slave) is requested to send data*/
+#define I2C_EV_SLV_READ 9	/*device (acting as slave) needed to read data*/
 
 typedef struct{
 	uint32_t SCLspeed;	/*refer to @I2C_SCLspeed for possible value*/
@@ -86,12 +88,46 @@ typedef struct{
 }I2C_Handle_t;
 
 /**
-*@brief I2C clock enable/disable
+*@brief I2C peripheral clock enable/disable
 *@param Pointer to base address of I2C registers
 *@param Enable or disable action
 *@return none
 */
 void I2C_CLK_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
+
+/**
+*@brief I2C peripheral enable/disable
+*
+*Set or clear PE bit in CR1 register to enable/disable I2C peripheral
+*Call this function after I2C_init to enable I2C communication. 
+*
+*@param Pointer to base address of I2C registers
+*@param Enable or disable action
+*@return none
+*/
+void I2C_periph_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
+
+/**
+*@brief I2C peripheral ACKing enable/disable
+*
+*Set or clear ACK bit in CR1 register to enable/disable ACKing
+*
+*@param Pointer to base address of I2C registers
+*@param Enable or disable action
+*@return none
+*/
+void I2C_ACK_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
+
+/**
+*@brief Set/clear I2C interrupt enable bit 
+*
+*Set or clear ITBUFEN, ITEVTEN, ITERREN in CR2
+*
+*@param Pointer to base address of I2C registers
+*@param Set or clear action
+*@return none
+*/
+void I2C_intrpt_ENbit_ctrl(I2C_TypeDef *I2CxPtr,uint8_t setOrClear);
 
 /**
 *@brief Initialize I2C communication
@@ -106,18 +142,6 @@ void I2C_init(I2C_Handle_t *I2CxHandlePtr);
 *@return none
 */
 void I2C_deinit(I2C_TypeDef *I2CxPtr);
-
-/**
-*@brief I2C peripheral enable/disable
-*
-*Set or clear PE bit in CR1 register to enable/disable I2C peripheral
-*Call this function after calling I2C_init to enable I2C communication. 
-*
-*@param Pointer to base address of I2C registers
-*@param Enable or disable action
-*@return none
-*/
-void I2C_periph_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis);
 
 /**
 *@brief Master receive data
@@ -166,20 +190,17 @@ uint8_t I2C_master_send_intrpt (I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPt
 /**
 *@brief Slave receive data
 *@param Pointer to base address of I2C registers
-*@param Pointer to memory region to store received data
-*@param Length of data
-*@return Pointer to memory region to store received data
+*@return Received data
 */
-uint8_t I2C_slave_receive (I2C_TypeDef *I2CxPtr, uint8_t *rxBufferPtr,uint32_t Length);
+uint8_t I2C_slave_receive (I2C_TypeDef *I2CxPtr);
 
 /**
 *@brief Slave send data 
 *@param Pointer to base address of I2C registers
-*@param Pointer to data to send
-*@param Length of data
+*@param Data byte
 *@return none
 */
-void I2C_slave_send(I2C_TypeDef *I2CxPtr, uint8_t *txBufferPtr, uint32_t Length);
+void I2C_slave_send(I2C_TypeDef *I2CxPtr, uint8_t dataByte);
 
 /**
 *@brief Enable or disable I2C 's interrupt 

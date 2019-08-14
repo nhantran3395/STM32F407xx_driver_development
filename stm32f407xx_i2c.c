@@ -40,18 +40,6 @@ static void I2C_address_phase_execute(I2C_TypeDef *I2CxPtr, uint8_t slaveAddr, u
 }
 
 /***********************************************************************
-Private function: enable/disable ACKing 
-***********************************************************************/
-static void I2C_ACK_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis)
-{
-	if(enOrDis == ENABLE){
-		I2CxPtr->CR1 |= I2C_CR1_ACK;
-	}else{
-		I2CxPtr->CR1 &= ~(I2C_CR1_ACK);
-	}
-}
-
-/***********************************************************************
 Private function: clear ADDR flag in SR register
 @Note: in receiver mode, in case only 1 byte has to be received, ACKing is disabled before clearing ADDR flag
 ***********************************************************************/
@@ -213,6 +201,35 @@ void I2C_periph_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis)
 	}
 }
 
+
+/***********************************************************************
+enable/disable ACKing 
+***********************************************************************/
+void I2C_ACK_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis)
+{
+	if(enOrDis == ENABLE){
+		I2CxPtr->CR1 |= I2C_CR1_ACK;
+	}else{
+		I2CxPtr->CR1 &= ~(I2C_CR1_ACK);
+	}
+}
+
+/***********************************************************************
+Set/clear I2C interrupt enable bit 
+***********************************************************************/
+void I2C_intrpt_ENbit_ctrl(I2C_TypeDef *I2CxPtr,uint8_t setOrClear)
+{
+	if(setOrClear == SET){
+		I2CxPtr->CR2 |= I2C_CR2_ITBUFEN;
+		I2CxPtr->CR2 |= I2C_CR2_ITEVTEN;
+		I2CxPtr->CR2 |= I2C_CR2_ITERREN;
+	}else{
+		I2CxPtr->CR2 &= ~(I2C_CR2_ITBUFEN);
+		I2CxPtr->CR2 &= ~(I2C_CR2_ITEVTEN);
+		I2CxPtr->CR2 &= ~(I2C_CR2_ITERREN);	
+	}
+}
+
 /***********************************************************************
 Initialize I2C communication
 ***********************************************************************/
@@ -309,7 +326,7 @@ void I2C_master_receive (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint3
 		/*case slave only send 1 byte of data, disable ACK, clear ADDR flag,generate stop condition before reading data*/
 		I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
 		I2C_clear_ADDRflag(I2CxHandlePtr);
-		if(repeatedStart == I2C_RS_DISABLE){
+		if(repeatedStart == I2C_REPEATED_START_DISABLE){
 			I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,STOP);
 		}
 		I2C_read_data(I2CxHandlePtr->I2CxPtr, rxBufferPtr, &Length);
@@ -321,7 +338,7 @@ void I2C_master_receive (I2C_Handle_t *I2CxHandlePtr, uint8_t *rxBufferPtr,uint3
 			if(Length == 1){
 				/*when there are 2 bytes left to receive, disable ACK and generate stop condition*/
 				I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
-				if(repeatedStart == I2C_RS_DISABLE){
+				if(repeatedStart == I2C_REPEATED_START_DISABLE){
 					I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,STOP);
 				}	
 			}
@@ -358,7 +375,7 @@ void I2C_master_send(I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPtr, uint32_t
 	while(!(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_BTF));
 	
 	/*generate stop condition*/
-	if(repeatedStart == I2C_RS_DISABLE)
+	if(repeatedStart == I2C_REPEATED_START_DISABLE)
 	{
 		I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,STOP);
 	}
@@ -408,6 +425,22 @@ uint8_t I2C_master_send_intrpt (I2C_Handle_t *I2CxHandlePtr, uint8_t *txBufferPt
 		I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr,START);
 	}
 	return state;
+}
+
+/***********************************************************************
+Slave receive data
+***********************************************************************/
+uint8_t I2C_slave_receive (I2C_TypeDef *I2CxPtr)
+{
+	return (uint8_t) I2CxPtr->DR;
+}
+
+/***********************************************************************
+Slave send data
+***********************************************************************/
+void I2C_slave_send(I2C_TypeDef *I2CxPtr, uint8_t dataByte)
+{
+	I2CxPtr->DR = dataByte;
 }
 
 /***********************************************************************
@@ -506,66 +539,83 @@ void I2C_event_intrpt_handler (I2C_Handle_t *I2CxHandlePtr)
 	}
 	
 	/*case interrupt is triggered by BTF flag*/
+	/**@note add case when device is in slave mode*/
 	if(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_BTF){
 		
 		/*when in data transmission, length = 0 & BTF = 1 & TXE = 1 indicate transmission is completed, therefore generate stop condition (if repeated start is disable)*/
 		if(I2CxHandlePtr->State == I2C_BUSY_IN_TX){
 			if(!I2CxHandlePtr->txLength){
 				if(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_TXE){
-					if(I2CxHandlePtr->repeatedStart == I2C_RS_DISABLE){
+					if(I2CxHandlePtr->repeatedStart == I2C_REPEATED_START_DISABLE){
 						I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr, STOP);
 					}
 				}
 			}
 		}
 		I2C_close_send_data(I2CxHandlePtr);
-		I2C_application_event_callback(I2CxHandlePtr,I2C_EV_TX_CMPLT);
+		I2C_application_event_callback(I2CxHandlePtr,I2C_EV_MST_TX_CMPLT);
 	}
 		
-//	/*case interrupt is triggered by STOFF flag (slave detected stop condition)*/
-//	/*this block is only executed in slave mode*/
-//	if(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_STOPF){
-//		I2C_clear_STOPFflag(I2CxHandlePtr->I2CxPtr);
-//		I2C_close_send_data(I2CxHandlePtr);
-//		I2C_application_event_callback(I2CxHandlePtr,I2C_EV_STOP);
-//	}
+	/*case interrupt is triggered by STOFF flag (slave detected stop condition)*/
+	/*this block is only executed in slave mode*/
+	if(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_STOPF){
+		I2C_clear_STOPFflag(I2CxHandlePtr->I2CxPtr);
+		I2C_application_event_callback(I2CxHandlePtr,I2C_EV_SLV_STOP_DETECTED);
+	}
 	
 	/*case interrupt is triggered by RXNE flag*/
 	if(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_RXNE){
-	
-		/*case slave only send 1 byte of data*/
-		if(I2CxHandlePtr->rxLength == 1){
-			I2C_read_data(I2CxHandlePtr->I2CxPtr, I2CxHandlePtr->rxBufferPtr, &(I2CxHandlePtr->rxLength));
-			I2CxHandlePtr->rxBufferPtr++;
-			
-		/*case slave send multiple data bytes*/	
-		}else if (I2CxHandlePtr->rxLength > 1){
 		
-			/*when there are 2 bytes left to receive, disable ACKing*/
-			if(I2CxHandlePtr->rxLength == 2){
-				I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
+		/*case device is in master mode*/
+		if(I2CxHandlePtr->I2CxPtr->SR2 & I2C_SR2_MSL){	
+			
+			/*case slave only send 1 byte of data*/
+			if(I2CxHandlePtr->rxLength == 1){
+				
+				I2C_read_data(I2CxHandlePtr->I2CxPtr, I2CxHandlePtr->rxBufferPtr, &(I2CxHandlePtr->rxLength));
+				I2CxHandlePtr->rxBufferPtr++;
+			
+			/*case slave send multiple data bytes*/
+			}else if (I2CxHandlePtr->rxLength > 1){
+				
+				if(I2CxHandlePtr->rxLength == 2){	
+					I2C_ACK_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
 				}	
-			I2C_read_data(I2CxHandlePtr->I2CxPtr, I2CxHandlePtr->rxBufferPtr, &(I2CxHandlePtr->rxLength));
-			I2CxHandlePtr->rxBufferPtr++;
-		}
-		
-		/*when all byte received*/
-		if (I2CxHandlePtr->rxLength == 0){
-			
-			if(I2CxHandlePtr->repeatedStart == I2C_RS_DISABLE){
-				I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr, STOP);
+				I2C_read_data(I2CxHandlePtr->I2CxPtr, I2CxHandlePtr->rxBufferPtr, &(I2CxHandlePtr->rxLength));
+				I2CxHandlePtr->rxBufferPtr++;
 			}
-			I2C_close_receive_data(I2CxHandlePtr);
-			I2C_application_event_callback(I2CxHandlePtr,I2C_EV_RX_CMPLT);
+			
+			/*after all bytes were received*/
+			if (I2CxHandlePtr->rxLength == 0){				
+				if(I2CxHandlePtr->repeatedStart == I2C_REPEATED_START_DISABLE){
+					I2C_start_stop_generation(I2CxHandlePtr->I2CxPtr, STOP);
+				}
+				I2C_close_receive_data(I2CxHandlePtr);
+				I2C_application_event_callback(I2CxHandlePtr,I2C_EV_MST_RX_CMPLT);
+			}
+		
+		/*case device is in slave mode*/
+		}else{
+			if(!(I2CxHandlePtr->I2CxPtr->SR2 & I2C_SR2_TRA)){
+				I2C_application_event_callback(I2CxHandlePtr,I2C_EV_SLV_READ);
+			}
 		}
 	}
 	
 	/*case interrupt is triggered by TXE flag*/
 	if(I2CxHandlePtr->I2CxPtr->SR1 & I2C_SR1_TXE){
+		
+		/*case device is in master mode*/
 		if(I2CxHandlePtr->I2CxPtr->SR2 & I2C_SR2_MSL){
 			if(I2CxHandlePtr->txLength){
 				I2C_send_data(I2CxHandlePtr->I2CxPtr,I2CxHandlePtr->txBufferPtr,&(I2CxHandlePtr->txLength));
 				I2CxHandlePtr->txBufferPtr++;
+			}
+		
+		/*case device is in slave mode*/
+		}else{
+			if(I2CxHandlePtr->I2CxPtr->SR2 & I2C_SR2_TRA){
+				I2C_application_event_callback(I2CxHandlePtr,I2C_EV_SLV_DT_REQ);
 			}
 		}
 	}
