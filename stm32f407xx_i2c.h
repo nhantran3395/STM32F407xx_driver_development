@@ -13,6 +13,7 @@
 
 #include "stm32f407xx.h"                  // Device header
 #include "stm32f407xx_common_macro.h"
+#include "stm32f407xx_rcc.h"
 #include <stdint.h>
 #include <stdlib.h>
 

@@ -10,6 +10,9 @@
 
 #include "stm32f407xx_i2c.h"
 
+extern uint32_t RCC_get_PCLK_value(uint8_t APBx);
+extern uint32_t RCC_get_PLL_output (void);
+
 /***********************************************************************
 Private function: generate start/ stop condition 
 ***********************************************************************/
@@ -116,55 +119,6 @@ static void I2C_send_data(I2C_TypeDef *I2CxPtr,uint8_t *txBufferPtr, uint32_t *L
 }
 
 /***********************************************************************
-Private function: get PLL output value
-***********************************************************************/
-static uint32_t RCC_get_PLL_output (void)
-{
-	return 0;
-}
-
-/***********************************************************************
-Private function: calculate APB1 clock value
-***********************************************************************/
-static uint32_t RCC_get_PCLK1_value (void)
-{
-	uint32_t sysClk = 0, PCLK1 = 0;
-	uint8_t sysClkStatus =	(RCC->CFGR >> RCC_CFGR_SWS_Pos) & 0x03;
-	uint8_t AHBdiv = 0, APB1div = 0;
-	uint16_t AHBdivArray[] = {2,4,8,16,64,128,256,512};
-	uint8_t APB1divArray[]	=	{2,4,8,16};
-	uint8_t AHBdivStatus = (RCC->CFGR >> RCC_CFGR_HPRE_Pos)	& 0x0F;
-	uint8_t APB1divStatus = (RCC->CFGR >> RCC_CFGR_PPRE1_Pos)	& 0x07;
-	
-	/*get system clock value*/
-	if(sysClkStatus == 0){
-		sysClk = 16000000;
-	}else if(sysClkStatus == 1){
-		sysClk = 8000000;
-	}else if(sysClkStatus == 2){
-		sysClk = RCC_get_PLL_output();
-	}	
-	
-	/*get AHB prescaler*/
-	if(AHBdivStatus <= 7){
-		AHBdiv = 1;
-	}else{
-		AHBdiv = AHBdivArray[AHBdivStatus-8];
-	}
-	
-	/*get APB1 prescaler*/
-	if(APB1divStatus <= 3){
-		APB1div = 1;
-	}else{
-		APB1div = APB1divArray[APB1divStatus-4];
-	}
-	
-	/*derive PCLK1*/ 
-	PCLK1 = (sysClk/AHBdiv)/APB1div;
-	return PCLK1;
-}
-
-/***********************************************************************
 I2C clock enable/disable
 ***********************************************************************/
 void I2C_CLK_ctr(I2C_TypeDef *I2CxPtr, uint8_t enOrDis)
@@ -242,7 +196,7 @@ void I2C_init(I2C_Handle_t *I2CxHandlePtr)
 	I2C_periph_ctr(I2CxHandlePtr->I2CxPtr,DISABLE);
 	
 	/*set I2C peripheral input frequency*/
-	uint32_t fPCLK1 = RCC_get_PCLK1_value();
+	uint32_t fPCLK1 = RCC_get_PCLK_value(APB1);
 	I2CxHandlePtr->I2CxPtr->CR2 &= ~(I2C_CR2_FREQ);
 	I2CxHandlePtr->I2CxPtr->CR2 |=	(fPCLK1/1000000) << I2C_CR2_FREQ_Pos;
 	
