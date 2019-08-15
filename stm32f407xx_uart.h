@@ -13,6 +13,7 @@
 
 #include "stm32f407xx.h"                  // Device header
 #include "stm32f407xx_common_macro.h"
+#include "stm32f407xx_rcc.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -24,18 +25,18 @@ Macro definition
 *@UART_BAUDRATE
 *UART baudrate selection
 */
-#define UART_BDR_1200 0
-#define UART_BDR_2400	1
-#define UART_BDR_4800	2
-#define UART_BDR_9600	3
-#define UART_BDR_14400	4
-#define UART_BDR_19200	5
-#define UART_BDR_38400	6
-#define UART_BDR_57600	7
-#define UART_BDR_115200	8
-#define UART_BDR_230400	9
-#define UART_BDR_460800	10
-#define UART_BDR_921600	11
+#define UART_BDR_1200 1200
+#define UART_BDR_2400	2400
+#define UART_BDR_4800	4800
+#define UART_BDR_9600	9600
+#define UART_BDR_14400	14400
+#define UART_BDR_19200	19200
+#define UART_BDR_38400	38400
+#define UART_BDR_57600	57600
+#define UART_BDR_115200	115200
+#define UART_BDR_230400	230400
+#define UART_BDR_460800	460800
+#define UART_BDR_921600	921600
 
 /*
 *@UART_STOPBITS
@@ -76,6 +77,7 @@ Macro definition
 #define UART_NO_FLOWCTRL 0
 #define UART_RTS_FLOWCTRL 1
 #define UART_CTS_FLOWCTRL 2
+#define UART_RTS_CTS_FLOWCTRL 3
 
 /***********************************************************************
 UART structure definition
