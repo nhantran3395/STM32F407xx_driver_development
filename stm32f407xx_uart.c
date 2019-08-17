@@ -190,22 +190,103 @@ void UART_deinit(USART_TypeDef *UARTxPtr)
 /***********************************************************************
 UART send data 
 ***********************************************************************/
-void UART_send(USART_TypeDef *UARTxHandlePtr, uint8_t *txDataPtr,uint32_t Length);
+void UART_send(UART_Handle_t *UARTxHandlePtr, uint8_t *txBufferPtr,uint32_t Length)
+{
+	uint16_t data = 0;
+	while(Length){
+		while(!(UARTxHandlePtr->UARTxPtr->SR & USART_SR_TXE));
+		
+		/*case 9 bits frame format*/
+		if(UARTxHandlePtr->UARTxConfigPtr->wordLength == UART_WRDLEN_9_DT_BITS){
+			data = *((uint16_t*)txBufferPtr) & 0x1FF;
+			UARTxHandlePtr->UARTxPtr->DR = data;
+			
+			if(UARTxHandlePtr->UARTxConfigPtr->parityCtrl == UART_NO_PARCTRL){
+				txBufferPtr += 2;
+			}else{
+				txBufferPtr++;
+			}
+		
+		/*case 8 bits frame format*/
+		}else{
+			UARTxHandlePtr->UARTxPtr->DR = *txBufferPtr;
+			txBufferPtr++;
+		}
+		
+		Length--;
+	}	
+	
+	while(!UARTxHandlePtr->UARTxPtr->SR & USART_SR_TC);
+}
 	
 /***********************************************************************
-UART receive data
+UART receive data	
 ***********************************************************************/
-void UART_receive(UART_Handle_t *UARTxHandlePtr, uint8_t *rxDataPtr, uint32_t Length);
+void UART_receive(UART_Handle_t *UARTxHandlePtr, uint8_t *rxBufferPtr, uint32_t Length)
+{
+	while(!Length){
+		while(UARTxHandlePtr->UARTxPtr->SR & USART_SR_RXNE);
+		
+		/*case 9 bits frame format*/
+		if(UARTxHandlePtr->UARTxConfigPtr->wordLength == UART_WRDLEN_9_DT_BITS){
+			
+			if(UARTxHandlePtr->UARTxConfigPtr->parityCtrl == UART_NO_PARCTRL){
+				*((uint16_t*)rxBufferPtr) = UARTxHandlePtr->UARTxPtr->DR & 0x1FF;
+				rxBufferPtr += 2;
+			}else{
+				*rxBufferPtr = (uint8_t)(UARTxHandlePtr->UARTxPtr->DR & 0xFF);
+				rxBufferPtr++;
+			}
+			
+		/*case 8 bits frame format*/
+		}else{
+			if(UARTxHandlePtr->UARTxConfigPtr->parityCtrl == UART_NO_PARCTRL){
+				*rxBufferPtr = UARTxHandlePtr->UARTxPtr->DR;
+				rxBufferPtr++;
+			}else{
+				*rxBufferPtr = UARTxHandlePtr->UARTxPtr->DR & 0x7F;
+				rxBufferPtr++;
+			}
+		}
+		Length--;
+	}
+}
 
 /***********************************************************************
 UART send data(interrup base)
 ***********************************************************************/
-uint8_t UART_send_intrpt (UART_Handle_t *UARTxHandlePtr, uint8_t *txData,uint32_t Length);
+uint8_t UART_send_intrpt (UART_Handle_t *UARTxHandlePtr, uint8_t *txBufferPtr,uint32_t Length)
+{
+	uint8_t state = UARTxHandlePtr->txState;
+	if(state == UART_STATE_READY){
+		UARTxHandlePtr->txBufferPtr = txBufferPtr;
+		UARTxHandlePtr->txLength = Length;
+		UARTxHandlePtr->txState = UART_STATE_TX_BUSY;
+		UARTxHandlePtr->UARTxPtr->SR &= ~USART_SR_TC;
+		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_TXEIE;
+		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_TCIE;
+		UARTxHandlePtr->UARTxPtr->CR3 |= USART_CR3_CTSIE;
+		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_PEIE;
+	}
+	return state;
+}
 
 /***********************************************************************
 UART receive data(interrup base)
 ***********************************************************************/
-uint8_t UART_receive_intrpt (UART_Handle_t *UARTxHandlePtr, uint8_t *rxData, uint32_t Length);
+uint8_t UART_receive_intrpt (UART_Handle_t *UARTxHandlePtr, uint8_t *rxBufferPtr, uint32_t Length)
+{
+	uint8_t state = UARTxHandlePtr->rxState;
+	if(state == UART_STATE_READY){
+		UARTxHandlePtr->txBufferPtr = rxBufferPtr;
+		UARTxHandlePtr->txLength = Length;
+		UARTxHandlePtr->txState = UART_STATE_RX_BUSY;
+		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_RXNEIE;
+		UARTxHandlePtr->UARTxPtr->CR3 |= USART_CR3_CTSIE;
+		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_PEIE;
+	}
+	return state;
+}
 
 /***********************************************************************
 Enable or disable UART peripheral 's interrupt vector in NVIC
@@ -252,6 +333,52 @@ UART interrupt handler
 ***********************************************************************/
 void UART_intrpt_handler (UART_Handle_t *UARTxHandlePtr)
 {
+	uint8_t check1 = UARTxHandlePtr->UARTxPtr->SR & USART_SR_TXE;
+	uint8_t check2 = UARTxHandlePtr->UARTxPtr->CR1 & USART_CR1_TXEIE;
+	
+	/*case interrupt triggered by TXE*/
+	if(check1 & check2){
+		uint16_t data = 0;
+		if(UARTxHandlePtr->txLength){
+			
+			/*case 9 bits frame format*/
+			if(UARTxHandlePtr->UARTxConfigPtr->wordLength == UART_WRDLEN_9_DT_BITS){
+				data = *((uint16_t*)UARTxHandlePtr->txBufferPtr) & 0x1FF;
+				UARTxHandlePtr->UARTxPtr->DR = data;
+			
+				if(UARTxHandlePtr->UARTxConfigPtr->parityCtrl == UART_NO_PARCTRL){
+					UARTxHandlePtr->txBufferPtr += 2;
+				}else{
+					UARTxHandlePtr->txBufferPtr++;
+			}
+		
+			/*case 8 bits frame format*/
+			}else{
+				UARTxHandlePtr->UARTxPtr->DR = *UARTxHandlePtr->txBufferPtr;
+				UARTxHandlePtr->txBufferPtr++;
+			}
+			UARTxHandlePtr->txLength--;
+		}
+	}
+	
+	/*case interrupt triggered by TC*/
+	check1 = UARTxHandlePtr->UARTxPtr->SR & USART_SR_TC;
+	check2 = UARTxHandlePtr->UARTxPtr->CR1 & USART_CR1_TCIE;
+	
+	if(check1 & check2){
+		if(UARTxHandlePtr->txLength==0){
+			UART_close_send_data(UARTxHandlePtr);
+//			UART_application_event_callback(UARTxHandlePtr,UART_EV_TX_COMPLETE);
+		}
+	}
+}
+
+void UART_close_send_data(UART_Handle_t *UARTxHandlePtr){
+		UARTxHandlePtr->txBufferPtr = NULL;
+		UARTxHandlePtr->txLength = 0;
+		UARTxHandlePtr->txState = UART_STATE_READY;
+		UARTxHandlePtr->UARTxPtr->CR1 &= ~USART_CR1_TXEIE;
+		UARTxHandlePtr->UARTxPtr->CR1 &= ~USART_CR1_TCIE;
 }
 
 /***********************************************************************

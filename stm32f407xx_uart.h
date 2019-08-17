@@ -79,6 +79,20 @@ Macro definition
 #define UART_CTS_FLOWCTRL 2
 #define UART_RTS_CTS_FLOWCTRL 3
 
+/*
+*@UART_STATE
+*State of UART transmitter/receiver
+*/
+#define UART_STATE_READY 0
+#define UART_STATE_TX_BUSY 1
+#define UART_STATE_RX_BUSY 2
+
+/*
+*@UART_EVENT
+*Event in UART transmission/reception
+*/
+#define UART_EV_TX_COMPLETE
+
 /***********************************************************************
 UART structure definition
 ***********************************************************************/
@@ -95,10 +109,16 @@ typedef struct{
 typedef struct{
 	USART_TypeDef *UARTxPtr;
 	UART_Config_t *UARTxConfigPtr;
+	uint8_t txState; /*state of transmitter, possible value: READY or TX_BUSY*/
+	uint8_t rxState; /*state of receiver, possible value: READY or RX_BUSY*/
+	uint8_t *txBufferPtr; /*pointer to sending data buffer*/
+	uint8_t *rxBufferPtr; /*pointer to buffer to store received data*/
+	uint32_t txLength; /*length of data to send*/
+	uint32_t rxLength; /*length of data to receive*/
 }UART_Handle_t;
 
 /***********************************************************************
-UART driver APIs proto
+UART driver APIs prototype
 ***********************************************************************/
 
 /**
@@ -153,7 +173,7 @@ void UART_deinit(USART_TypeDef *I2CxPtr);
 *@param Length of data (in bytes)
 *@return none
 */
-void UART_send(USART_TypeDef *UARTxHandlePtr, uint8_t *txDataPtr,uint32_t Length);
+void UART_send(UART_Handle_t *UARTxHandlePtr, uint8_t *txBufferPtr,uint32_t Length);
 
 /**
 *@brief UART receive data
@@ -162,7 +182,7 @@ void UART_send(USART_TypeDef *UARTxHandlePtr, uint8_t *txDataPtr,uint32_t Length
 *@param Length of data (in bytes)
 *@return none
 */
-void UART_receive(UART_Handle_t *UARTxHandlePtr, uint8_t *rxDataPtr, uint32_t Length);
+void UART_receive(UART_Handle_t *UARTxHandlePtr, uint8_t *rxBufferPtr, uint32_t Length);
 
 /**
 *@brief UART send data(interrup base)
@@ -206,10 +226,17 @@ void UART_intrpt_priority_config(uint8_t IRQnumber, uint8_t priority);
 void UART_intrpt_handler (UART_Handle_t *UARTxHandlePtr);
 
 /**
+*@brief close UART transmission
+*@param Pointer to UART_Handle struct
+*@return none
+*/
+void UART_close_send_data(UART_Handle_t *UARTxHandlePtr);
+
+/**
 *@brief inform application of UART event or error
 *@param Pointer to UART_Handle struct
 *@param Event/error macro
 *@return none
 */
-void I2C_application_event_callback (UART_Handle_t *I2CxHandlePtr,uint8_t event);
+void UART_application_event_callback (UART_Handle_t *I2CxHandlePtr,uint8_t event);
 #endif 
