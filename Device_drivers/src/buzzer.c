@@ -1,5 +1,5 @@
 /**
-*@file buzzer.h
+*@file buzzer.c
 *@brief provide functions for interfacing with button
 *
 *This source file provide functions for interfacing with buzzer.
@@ -15,6 +15,7 @@
 
 uint16_t sineWaveTable[SAMPLE_NUM] = {2048,3251,3995,3996,3253,2051,847,101,98,839};
 uint8_t count = 0;
+uint8_t TIM7_flag = 0;
 
 /*debug purpose*/
 #include "../inc/led.h"
@@ -73,6 +74,8 @@ void buzzer_play_sound (uint32_t freq, uint32_t duration){
 	uint16_t TIM7reloadVal = 0;
 	uint32_t APB1_clock = RCC_get_PCLK_value(APB1);
 	
+	TIM7_flag = 0;
+	
 	TIM6reloadVal = APB1_clock/(freq*SAMPLE_NUM*(TIM6_PRESCALE_VAL+1))-1;
 	TIM7reloadVal =	((APB1_clock/(TIM7_PRESCALE_VAL+1))*duration)/1000 -1;
 	
@@ -81,6 +84,8 @@ void buzzer_play_sound (uint32_t freq, uint32_t duration){
 	
 	TIM_ctr(TIM6,START);
 	TIM_ctr(TIM7,START);
+	
+	while(!TIM7_flag);
 }
 
 void buzzer_stop_sound (void)
@@ -101,9 +106,10 @@ void TIM6_DAC_IRQHandler (void)
 	led_toggle(GPIOD,GPIO_PIN_NO_14);
 }
 
-void TIM7_DAC_IRQHandler (void)
+void TIM7_IRQHandler (void)
 {
 	TIM_intrpt_handler(TIM7);
 	TIM_ctr(TIM6,STOP);
 	TIM_ctr(TIM7,STOP);
+	TIM7_flag = 1;
 }
