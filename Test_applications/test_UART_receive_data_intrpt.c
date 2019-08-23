@@ -3,7 +3,11 @@
 *
 *When user type any character into serial terminal in PC, STM32F4 discovery board receive the character and send it back to PC.
 *The character will be printed in serial terminal.
-*Purpose is to confirm the working of UART receive data API (busy wait method)
+*During character reception, when no new character is being sent  from PC, green led on discovery board will blink.
+*This show the difference between busy-wait based method and interrupt based method.
+*With busy wait, when user have not yet type in any character, the board can only wait until user type in a character and can not perform any task during that.
+*With interrupt, the board can perform other task ( like blinking led ) while waiting for user to type in a character.
+*Purpose of the program is to confirm the working of UART receive data API (interrupt based method).
 *
 *@author Tran Thanh Nhan
 *@date 08/23/2019
