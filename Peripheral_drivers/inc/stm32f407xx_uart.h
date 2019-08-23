@@ -91,8 +91,8 @@ Macro definition
 *@UART_EVENT
 *Event in UART transmission/reception
 */
-#define UART_EV_TX_COMPLETE
-#define UART_EV_RX_COMPLETE
+#define UART_EV_TX_COMPLETE 0
+#define UART_EV_RX_COMPLETE 1
 
 /***********************************************************************
 UART structure definition

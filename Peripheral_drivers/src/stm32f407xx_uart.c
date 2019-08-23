@@ -224,8 +224,8 @@ UART receive data
 ***********************************************************************/
 void UART_receive(UART_Handle_t *UARTxHandlePtr, uint8_t *rxBufferPtr, uint32_t Length)
 {
-	while(!Length){
-		while(UARTxHandlePtr->UARTxPtr->SR & USART_SR_RXNE);
+	while(Length){
+		while(!(UARTxHandlePtr->UARTxPtr->SR & USART_SR_RXNE));
 		
 		/*case 9 bits frame format*/
 		if(UARTxHandlePtr->UARTxConfigPtr->wordLength == UART_WRDLEN_9_DT_BITS){
@@ -278,9 +278,9 @@ uint8_t UART_receive_intrpt (UART_Handle_t *UARTxHandlePtr, uint8_t *rxBufferPtr
 {
 	uint8_t state = UARTxHandlePtr->rxState;
 	if(state == UART_STATE_READY){
-		UARTxHandlePtr->txBufferPtr = rxBufferPtr;
-		UARTxHandlePtr->txLength = Length;
-		UARTxHandlePtr->txState = UART_STATE_RX_BUSY;
+		UARTxHandlePtr->rxBufferPtr = rxBufferPtr;
+		UARTxHandlePtr->rxLength = Length;
+		UARTxHandlePtr->rxState = UART_STATE_RX_BUSY;
 		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_RXNEIE;
 		UARTxHandlePtr->UARTxPtr->CR3 |= USART_CR3_CTSIE;
 		UARTxHandlePtr->UARTxPtr->CR1 |= USART_CR1_PEIE;
@@ -406,7 +406,7 @@ void UART_intrpt_handler (UART_Handle_t *UARTxHandlePtr)
 		/*when all bytes were received, close receiver and inform user application*/
 		if(!UARTxHandlePtr->rxLength){
 			UART_close_receive_data(UARTxHandlePtr);
-//			UART_application_event_callback(UARTxHandlePtr,UART_EV_RX_COMPLETE);
+			UART_application_event_callback(UARTxHandlePtr,UART_EV_RX_COMPLETE);
 		}
 	}
 }
