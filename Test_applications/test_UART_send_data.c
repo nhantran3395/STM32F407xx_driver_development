@@ -76,7 +76,7 @@ int main (void)
 	UART2_GPIO_pin_init();
 	UART2_init();
 	
-	char msg[]="Testing STM32F4 UART transmitter \n";
+	char msg[]="Testing STM32F4 UART transmitter (busy wait method)\n \r";
 	
 	while(1){
 		if(button_read(GPIOA,GPIO_PIN_NO_0)){

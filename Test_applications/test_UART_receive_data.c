@@ -1,14 +1,19 @@
 /**
-*@brief test STM32F4xx UART API 
+*@brief test UART receive data APIs by echoing character between PC and STM32F4 discovery board
+*
+*When user type any character into serial terminal in PC, STM32F4 discovery board receive the character and send it back to PC.
+*The character will be printed in serial terminal.
+*Purpose is to confirm the working of UART receive data API (busy wait method)
+*
 *@author Tran Thanh Nhan
-*@date 08/15/2019
+*@date 08/23/2019
 */
 
 /*
 *@PIN_MAPPING
 *Pin mapping
-*UART_TX PA2
-*UART_RX PA3
+*UART2_TX PA2
+*UART2_RX PA3
 */
 
 #include "stm32f4xx.h"                  // Device header
@@ -29,7 +34,7 @@ UART_Handle_t UART2Handle;
 
 void UART2_GPIO_pin_init (void)
 {	
-	GPIO_Pin_config_t GPIO_UART2_pin_config = {.mode = GPIO_MODE_ALTFN,.speed = GPIO_OUTPUT_LOW_SPEED,.outType = GPIO_OUTPUT_TYPE_OD,.puPdr = GPIO_PU,.altFunc = 7};
+	GPIO_Pin_config_t GPIO_UART2_pin_config = {.mode = GPIO_MODE_ALTFN,.outType = GPIO_OUTPUT_TYPE_OD,.puPdr = GPIO_PU,.altFunc = 7};
 	GPIO_Handle_t GPIO_UART2_pin_handle;
 	GPIO_UART2_pin_handle.GPIOxPtr = GPIOA;
 
@@ -64,31 +69,18 @@ void UART2_init (void)
 
 int main (void)
 {
-	/*initilize green led on PD12, red led on PD14, blue led on PD15*/
+	/*initialize green led on PD12*/
 	led_init(GPIOD,GPIO_PIN_NO_12);
-	led_init(GPIOD,GPIO_PIN_NO_14);
-	led_init(GPIOD,GPIO_PIN_NO_15);
-	
-	/*initialize user button on PA0*/
-	button_init(GPIOA,GPIO_PIN_NO_0,GPIO_NO_PUPDR);
 	
 	/*initilize UART2 on PA0:PA3*/
 	UART2_GPIO_pin_init();
 	UART2_init();
 	
-	/*enable USART2 interrupt vector in NVIC*/
-	UART_intrpt_vector_ctrl(IRQ_USART2,ENABLE);
-	
-	char msg[]="Testing STM32F4 UART transmitter \n \r";
+	uint8_t receivedChar = 0;
 	
 	while(1){
-		if(button_read(GPIOA,GPIO_PIN_NO_0)){
-			led_on(GPIOD,GPIO_PIN_NO_12);
-			delay();
-			UART_send_intrpt(&UART2Handle,(uint8_t*)msg,strlen(msg));
-		}else{
-			led_off(GPIOD,GPIO_PIN_NO_12);
-		}
+		UART_receive(&UART2Handle,&receivedChar,1);
+		UART_send(&UART2Handle,&receivedChar,1);
 	}
 }
 
