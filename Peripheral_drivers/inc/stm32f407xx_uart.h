@@ -14,6 +14,7 @@
 #include "stm32f407xx.h"                  // Device header
 #include "stm32f407xx_common_macro.h"
 #include "stm32f407xx_rcc.h"
+#include "stm32f407xx_gpio.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -95,7 +96,7 @@ Macro definition
 #define UART_EV_RX_COMPLETE 1
 
 /***********************************************************************
-UART structure definition
+UART structure and enumeration definition
 ***********************************************************************/
 
 typedef struct{
@@ -117,6 +118,23 @@ typedef struct{
 	uint32_t txLength; /*length of data to send*/
 	uint32_t rxLength; /*length of data to receive*/
 }UART_Handle_t;
+
+/*
+*             |pins pack 1    |pins pack 2    |pins pack 3	
+*U(S)ARTX     |TX     RX      |TX     RX      |TX     RX
+*
+*USART1       |PA9    PA10    |PB6    PB7     |-      -
+*USART2       |PA2    PA3     |PD5    PD6     |-      -
+*USART3       |PB10   PB11    |PC10   PC11    |PD8    PD9
+*UART4        |PA0    PA1     |PC10   PC11    |-      -
+*UART5        |PC12   PD2     |-      -       |-      -
+*USART6       |PC6    PC7     |PG14   PG9     |-      -
+*/
+typedef enum{
+	UART_pins_pack_1,
+	UART_pins_pack_2,
+	UART_pins_pack_3,
+}UART_Pins_pack_t;
 
 /***********************************************************************
 UART driver APIs prototype
@@ -154,11 +172,25 @@ void UART_periph_ctr(USART_TypeDef *UARTxPtr, uint8_t enOrDis);
 void UART_intrpt_ENbit_ctrl(USART_TypeDef *I2CxPtr,uint8_t setOrClear);
 
 /**
-*@brief Initialize UART communication
+*@brief Initialize UARTx
 *@param Pointer to UART handle struct
 *@return none
 */
 void UART_init(UART_Handle_t *UARTxHandlePtr);
+
+/**
+*@brief Initialize UART peripheral and initialize corresponding GPIO pins as UART function
+*@param Pointer to UARTx peripheral
+*@param Pins pack
+*@param Baudrate
+*@param Number of stop bit
+*@param Word length
+*@param UART mode (transceiver, receiver, transceiver & receiver)
+*@param Parity control
+*@param Flow control
+*@return none
+*/
+UART_Handle_t* UART_general_init(USART_TypeDef *UARTxPtr, UART_Pins_pack_t pinsPack, uint32_t baudRate, uint8_t stopBit, uint8_t wordLength, uint8_t mode, uint8_t parityCtrl, uint8_t flowCtrl);
 
 /**
 *@brief Deinitialize UART communication

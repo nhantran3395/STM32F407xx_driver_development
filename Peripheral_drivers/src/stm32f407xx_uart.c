@@ -13,25 +13,11 @@
 extern uint32_t RCC_get_PCLK_value(uint8_t APBx);
 extern uint32_t RCC_get_PLL_output (void);
 
-/***********************************************************************
-Private function: USARTDIV 's integer part calculator
-***********************************************************************/
-static uint16_t USARTDIV_integer_part_calc (uint32_t periphCLK, uint32_t baudRate)
-{
-	uint16_t integerVal = periphCLK/(baudRate*16);
-	return integerVal;
-}
-
-/***********************************************************************
-Private function: USARTDIV 's fractional part calculator
-***********************************************************************/
-static uint8_t USARTDIV_fractional_part_calc (uint32_t periphCLK, uint32_t baudRate)
-{
-	double fixedPointVal = (double)periphCLK/(double)(baudRate*16);
-	uint16_t integerVal = periphCLK/(baudRate*16);
-	uint8_t fractionalVal = (fixedPointVal-integerVal)*16;
-	return fractionalVal;
-}
+static uint8_t USARTDIV_fractional_part_calc (uint32_t periphCLK, uint32_t baudRate);
+static uint16_t USARTDIV_integer_part_calc (uint32_t periphCLK, uint32_t baudRate);
+static void UART_pins_pack_1_gpio_init(USART_TypeDef *UARTxPtr);
+static void UART_pins_pack_2_gpio_init(USART_TypeDef *UARTxPtr);
+static void UART_pins_pack_3_gpio_init(USART_TypeDef *UARTxPtr);
 
 /***********************************************************************
 UART clock enable/disable
@@ -162,7 +148,38 @@ void UART_init(UART_Handle_t *UARTxHandlePtr)
 }
 
 /***********************************************************************
-Deinitialize I2C communication
+Initialize UART peripheral and initialize corresponding GPIO pins as UART function
+***********************************************************************/
+UART_Handle_t* UART_general_init(USART_TypeDef *UARTxPtr, UART_Pins_pack_t pinsPack, uint32_t baudRate, uint8_t stopBit, uint8_t wordLength, uint8_t mode, uint8_t parityCtrl, uint8_t flowCtrl)
+{
+	if(pinsPack == UART_pins_pack_1){
+		UART_pins_pack_1_gpio_init(UARTxPtr);
+	}else if(pinsPack == UART_pins_pack_2){
+		UART_pins_pack_2_gpio_init(UARTxPtr);
+	}else if(pinsPack == UART_pins_pack_3){
+		UART_pins_pack_3_gpio_init(UARTxPtr);
+	}
+	
+	static UART_Handle_t UARTxHandle;
+	static UART_Config_t UARTxConfig;
+	
+	UARTxConfig.baudRate = baudRate;
+	UARTxConfig.stopBit = stopBit;
+	UARTxConfig.wordLength = wordLength;
+	UARTxConfig.mode = mode;
+	UARTxConfig.parityCtrl = parityCtrl;
+	UARTxConfig.flowCtrl = flowCtrl;
+	
+	UARTxHandle.UARTxPtr = UARTxPtr;
+	UARTxHandle.UARTxConfigPtr = &UARTxConfig;
+	
+	UART_init(&UARTxHandle);
+	
+	return &UARTxHandle;
+}
+
+/***********************************************************************
+Denitialize UART communication
 ***********************************************************************/
 void UART_deinit(USART_TypeDef *UARTxPtr)
 {
@@ -438,4 +455,84 @@ inform application of UART event or error
 ***********************************************************************/
 __attribute__((weak)) void UART_application_event_callback (UART_Handle_t *I2CxHandlePtr,uint8_t event) 
 {
+}
+
+/***********************************************************************
+Private function: USARTDIV 's integer part calculator
+***********************************************************************/
+static uint16_t USARTDIV_integer_part_calc (uint32_t periphCLK, uint32_t baudRate)
+{
+	uint16_t integerVal = periphCLK/(baudRate*16);
+	return integerVal;
+}
+
+/***********************************************************************
+Private function: USARTDIV 's fractional part calculator
+***********************************************************************/
+static uint8_t USARTDIV_fractional_part_calc (uint32_t periphCLK, uint32_t baudRate)
+{
+	double fixedPointVal = (double)periphCLK/(double)(baudRate*16);
+	uint16_t integerVal = periphCLK/(baudRate*16);
+	uint8_t fractionalVal = (fixedPointVal-integerVal)*16;
+	return fractionalVal;
+}
+
+/***********************************************************************
+Private function: Initialize GPIO pin as UART function (for pins pack 1) 
+***********************************************************************/
+static void UART_pins_pack_1_gpio_init(USART_TypeDef *UARTxPtr)
+{
+	if(UARTxPtr == USART1){
+		GPIO_init_direct(GPIOA,GPIO_PIN_NO_9,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOA,GPIO_PIN_NO_10,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+	}else if (UARTxPtr == USART2){
+		GPIO_init_direct(GPIOA,GPIO_PIN_NO_2,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOA,GPIO_PIN_NO_3,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);	
+	}else if (UARTxPtr == USART3){
+		GPIO_init_direct(GPIOB,GPIO_PIN_NO_10,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOB,GPIO_PIN_NO_11,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);		
+	}else if (UARTxPtr == UART4){
+		GPIO_init_direct(GPIOA,GPIO_PIN_NO_0,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOA,GPIO_PIN_NO_1,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);		
+	}else if (UARTxPtr == UART5){
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_12,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOD,GPIO_PIN_NO_2,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);		
+	}else if (UARTxPtr == USART6){
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_6,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_7,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);		
+	}	
+}
+
+/***********************************************************************
+Private function: Initialize GPIO pin as UART function (for pins pack 2) 
+***********************************************************************/
+static void UART_pins_pack_2_gpio_init(USART_TypeDef *UARTxPtr)
+{
+	if(UARTxPtr == USART1){
+		GPIO_init_direct(GPIOB,GPIO_PIN_NO_6,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOB,GPIO_PIN_NO_7,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+	}else if (UARTxPtr == USART2){
+		GPIO_init_direct(GPIOD,GPIO_PIN_NO_5,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOD,GPIO_PIN_NO_6,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);	
+	}else if (UARTxPtr == USART3){
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_10,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_11,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);		
+	}else if (UARTxPtr == UART4){
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_10,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOC,GPIO_PIN_NO_11,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);			
+	}else if (UARTxPtr == USART6){
+		GPIO_init_direct(GPIOG,GPIO_PIN_NO_14,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOG,GPIO_PIN_NO_9,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);		
+	}	
+}
+
+/***********************************************************************
+Private function: Initialize GPIO pin as UART function (for pins pack 3) 
+***********************************************************************/
+static void UART_pins_pack_3_gpio_init(USART_TypeDef *UARTxPtr)
+{
+	if(UARTxPtr == USART3){
+		GPIO_init_direct(GPIOD,GPIO_PIN_NO_8,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+		GPIO_init_direct(GPIOD,GPIO_PIN_NO_9,GPIO_MODE_ALTFN,GPIO_OUTPUT_LOW_SPEED,GPIO_OUTPUT_TYPE_OD,GPIO_PU,7);
+	}
 }
