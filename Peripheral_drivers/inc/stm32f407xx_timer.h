@@ -62,6 +62,15 @@ void TIM_ctr(TIM_TypeDef *TIMxPtr, uint8_t startOrStop);
 void TIM_init(TIM_Handle_t *TIMxHandlePtr);
 
 /**
+*@brief Initialize timer directly using given parameter
+*@param Pointer to timer x peripheral
+*@param Reload value
+*@param Prescaler
+*@return none
+*/
+void TIM_init_direct(TIM_TypeDef *TIMxPtr,uint16_t reloadVal,uint16_t preScaler);
+
+/**
 *@brief Deinitialize timer
 *@param Pointer to base address of timer
 *@return none

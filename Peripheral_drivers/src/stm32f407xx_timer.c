@@ -70,6 +70,23 @@ void TIM_init(TIM_Handle_t *TIMxHandlePtr)
 }
 
 /***********************************************************************
+Initialize timer directly using given parameter
+***********************************************************************/
+void TIM_init_direct(TIM_TypeDef *TIMxPtr,uint16_t reloadVal,uint16_t preScaler)
+{
+	TIM_Handle_t TIMxHandle;
+	TIM_Config_t TIMxConfig;
+	
+	TIMxConfig.reloadVal = reloadVal;
+	TIMxConfig.prescaler = preScaler;
+	
+	TIMxHandle.TIMxPtr = TIMxPtr;
+	TIMxHandle.TIMxConfigPtr = &TIMxConfig;
+	
+	TIM_init(&TIMxHandle);
+}
+
+/***********************************************************************
 Deinitialize timer
 ***********************************************************************/
 void TIM_deinit(TIM_TypeDef *TIMxPtr)
