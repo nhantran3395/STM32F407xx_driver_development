@@ -15,28 +15,6 @@
 #include "stm32f407xx_common_macro.h"
 #include <stdint.h>
 
-//#define ENABLE 1
-//#define DISABLE 0
-//#define SET 1
-//#define CLEAR 0
-
-///*
-//*ARM cortex M4 Processor NVIC IPR register base address
-//*/
-//#define NVIC_IPR_BASE_ADDR 	((volatile uint32_t*)0xE000E400)
-//#define NUM_OF_IPR_BIT_IMPLEMENTED 4
-
-///*
-//*IRQ number
-//*/
-//#define IRQ_EXTI0 6
-//#define IRQ_EXTI1 7
-//#define IRQ_EXTI2 8
-//#define IRQ_EXTI3 9
-//#define IRQ_EXTI4 10
-//#define IRQ_EXTI9_5 23
-//#define IRQ_EXTI15_10 40
-
 /*
 *@GPIO_PIN_NO
 *GPIO pin number
@@ -124,6 +102,13 @@ void GPIO_CLK_ctr (GPIO_TypeDef *GPIOxPtr, uint8_t enOrDis);
 *@return none
 */
 void GPIO_init (GPIO_Handle_t *GPIOxHandlePtr);
+
+/**
+*@brief Initialize corresponded GPIO pin directly using given parameter
+*@param Pointer to GPIO port x  
+*@return none
+*/
+void GPIO_init_direct (GPIO_TypeDef *GPIOxPtr,uint8_t pinNumber,uint8_t mode,uint8_t speed, uint8_t outType, uint8_t puPdr, uint8_t altFunc);
 
 /**
 *@brief Deinitilize GPIO pin

@@ -134,6 +134,23 @@ void GPIO_init (GPIO_Handle_t *GPIOxHandlePtr)
 	GPIOxHandlePtr->GPIOxPtr->AFR[registerNo] |= valueSet<<(4*bitPos);
 }
 
+void GPIO_init_direct (GPIO_TypeDef *GPIOxPtr,uint8_t pinNumber,uint8_t mode,uint8_t speed, uint8_t outType, uint8_t puPdr, uint8_t altFunc)
+{
+	GPIO_Handle_t GPIOxHandle;
+	GPIO_Pin_config_t GPIOxConfig;
+	
+	GPIOxConfig.pinNumber = pinNumber;
+	GPIOxConfig.mode = mode;
+	GPIOxConfig.speed = speed;
+	GPIOxConfig.outType = outType;
+	GPIOxConfig.puPdr = puPdr;
+	GPIOxConfig.altFunc = altFunc;
+	
+	GPIOxHandle.GPIOxPtr = GPIOxPtr;
+	GPIOxHandle.GPIO_Pin_config = GPIOxConfig;
+	GPIO_init(&GPIOxHandle);
+}
+
 void GPIO_deinit (GPIO_TypeDef *GPIOxPtr)
 {
 	if(GPIOxPtr == GPIOA){
