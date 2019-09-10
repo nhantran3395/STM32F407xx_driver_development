@@ -278,7 +278,7 @@ int32_t RCC_get_PLL_output (void)
 	
 	/*determine VCO output multiplication factor*/
 	/*VCO input multiplication factor possible value is [50,432]*/
-	VCOinputDiv =  (RCC->PLLCFGR & RCC_PLLCFGR_PLLN) >> RCC_PLLCFGR_PLLN_Pos;
+	VCOoutputMul =  (RCC->PLLCFGR & RCC_PLLCFGR_PLLN) >> RCC_PLLCFGR_PLLN_Pos;
 	if(VCOoutputMul <50 || VCOoutputMul > 432){
 		return -1;
 	}	
